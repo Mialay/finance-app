@@ -3,9 +3,10 @@ import type { Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { ServiceWorkerRegister } from "./sw-register";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,11 +55,18 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      lang="de"
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <DashboardShell>{children}</DashboardShell>
         <ServiceWorkerRegister />
       </body>
     </html>
