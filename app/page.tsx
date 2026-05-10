@@ -62,6 +62,12 @@ const categories: CategoryItem[] = [
   ["Sonstiges", "282 €", "11 %", "bg-slate-300"],
 ];
 
+const expenseDetails = [
+  ["Größte Einzelbuchung", "Miete", "780 €"],
+  ["Häufigste Kategorie", "Lebensmittel", "12 Buchungen"],
+  ["Über Budget", "Freizeit", "+45 €"],
+];
+
 const transactions = [
   {
     merchant: "REWE",
@@ -204,8 +210,17 @@ export default function OverviewPage() {
         ))}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mt-4 grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-4">
+          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          {/* CSS-only disclosure for lightweight mock details in the overview card. */}
+          <input
+            id="expense-details"
+            type="checkbox"
+            className="peer/expense sr-only"
+            aria-hidden="true"
+          />
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Ausgaben im Mai</h2>
@@ -236,12 +251,69 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          <button className="mt-6 hidden items-center gap-2 text-sm font-semibold lg:flex">
-            <ChevronRight className="size-4" />
+          <label
+            htmlFor="expense-details"
+            className="mt-6 hidden cursor-pointer items-center gap-2 text-sm font-semibold lg:flex"
+          >
+            <ChevronRight className="size-4 transition-transform peer-checked/expense:rotate-90" />
             Details ansehen
-          </button>
+          </label>
+
+          <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 peer-checked/expense:mt-4 peer-checked/expense:grid-rows-[1fr]">
+            <div className="overflow-hidden">
+              <div className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                <div className="grid gap-3 md:grid-cols-3">
+                  {expenseDetails.map(([label, name, value]) => (
+                    <div key={label}>
+                      <p className="text-xs font-medium text-slate-500">
+                        {label}
+                      </p>
+                      <p className="mt-1 text-sm font-bold">{name}</p>
+                      <p className="mt-1 text-sm text-slate-600">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </article>
 
+        <article className="hidden rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:block">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-bold">Einsparpotenzial</h2>
+              <p className="text-sm text-slate-500">3 Vorschläge für dich</p>
+            </div>
+            <button className="text-sm text-slate-500">Alle anzeigen</button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {opportunities.map((item) => (
+              <div
+                key={item.title}
+                className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3"
+              >
+                <div
+                  className={`flex size-10 items-center justify-center rounded-lg ${item.tone}`}
+                >
+                  <item.icon className="size-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">{item.title}</p>
+                  <p className="text-xs text-slate-500">{item.text}</p>
+                </div>
+                <span className="rounded-md bg-emerald-50 px-2 py-1 text-sm font-semibold text-emerald-700">
+                  {item.value}
+                </span>
+                <ChevronRight className="size-4 text-slate-500" />
+              </div>
+            ))}
+          </div>
+        </article>
+
+        </div>
+
+        <div className="space-y-4">
         <article className="hidden rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:block">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">Entwicklung</h2>
@@ -316,42 +388,6 @@ export default function OverviewPage() {
             Details ansehen
           </button>
         </article>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <article className="hidden rounded-lg border border-slate-200 bg-white p-5 shadow-sm lg:block">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold">Einsparpotenzial</h2>
-              <p className="text-sm text-slate-500">3 Vorschläge für dich</p>
-            </div>
-            <button className="text-sm text-slate-500">Alle anzeigen</button>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {opportunities.map((item) => (
-              <div
-                key={item.title}
-                className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3"
-              >
-                <div
-                  className={`flex size-10 items-center justify-center rounded-lg ${item.tone}`}
-                >
-                  <item.icon className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold">{item.title}</p>
-                  <p className="text-xs text-slate-500">{item.text}</p>
-                </div>
-                <span className="rounded-md bg-emerald-50 px-2 py-1 text-sm font-semibold text-emerald-700">
-                  {item.value}
-                </span>
-                <ChevronRight className="size-4 text-slate-500" />
-              </div>
-            ))}
-          </div>
-        </article>
-
         <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold">Letzte Transaktionen</h2>
@@ -382,7 +418,8 @@ export default function OverviewPage() {
               </div>
             ))}
           </div>
-        </article>
+          </article>
+        </div>
       </div>
     </>
   );

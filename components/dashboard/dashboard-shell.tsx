@@ -128,8 +128,13 @@ function useCurrentPage() {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const { pathname, currentPage } = useCurrentPage();
 
+  if (pathname === "/login" || pathname === "/signup") {
+    return <>{children}</>;
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f7f8] pt-[max(env(safe-area-inset-top),1rem)] text-slate-950 lg:pt-0">
+      {/* CSS-only mobile drawer state keeps the shell usable without extra client state. */}
       <input
         id="mobile-navigation"
         type="checkbox"
@@ -282,6 +287,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white px-5 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] lg:hidden">
+        {/* CSS-only quick action menu for the mobile bottom navigation. */}
         <input
           id="quick-action-menu"
           type="checkbox"
