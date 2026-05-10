@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Suspense } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   BarChart3,
   Bell,
@@ -23,6 +24,12 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import {
+  getPeriod,
+  periodToSearchParams,
+  shiftPeriod,
+  type PeriodView,
+} from "@/lib/period";
 
 type NavItem = {
   label: string;
@@ -99,12 +106,100 @@ const mobileNavItems = [
   navItems[4],
 ];
 
-function MonthPicker() {
+function getPeriodFromSearchParams(searchParams: URLSearchParams) {
+  return getPeriod({
+    month: searchParams.get("month") ?? undefined,
+    quarter: searchParams.get("quarter") ?? undefined,
+    view: searchParams.get("view") ?? undefined,
+    year: searchParams.get("year") ?? undefined,
+  });
+}
+
+function buildPeriodHref(pathname: string, searchParams: URLSearchParams) {
+  const period = getPeriodFromSearchParams(searchParams);
+  return `${pathname}?${periodToSearchParams(period).toString()}`;
+}
+
+function buildShiftedPeriodHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+  offset: number,
+) {
+  const period = shiftPeriod(getPeriodFromSearchParams(searchParams), offset);
+  return `${pathname}?${periodToSearchParams(period).toString()}`;
+}
+
+function buildViewHref(
+  pathname: string,
+  searchParams: URLSearchParams,
+  view: PeriodView,
+) {
+  const current = getPeriodFromSearchParams(searchParams);
+  const params = periodToSearchParams(getPeriod({ ...current.params, view }));
+
+  return `${pathname}?${params.toString()}`;
+}
+
+function PeriodPicker() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const period = getPeriodFromSearchParams(searchParams);
+
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm">
-      <ChevronLeft className="size-4" />
-      <span className="px-6">Mai 2024</span>
-      <ChevronRight className="size-4" />
+    <div className="flex items-center gap-2">
+      <div className="hidden rounded-lg border border-slate-200 bg-white p-1 text-xs font-semibold shadow-sm sm:flex">
+        {(["month", "quarter", "year"] as const).map((view) => (
+          <Link
+            key={view}
+            href={buildViewHref(pathname, searchParams, view)}
+            className={`rounded-md px-3 py-1.5 transition ${
+              period.view === view
+                ? "bg-emerald-500 text-white"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+          >
+            {view === "month" ? "Monat" : view === "quarter" ? "Quartal" : "Jahr"}
+          </Link>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm">
+        <Link
+          href={buildShiftedPeriodHref(pathname, searchParams, -1)}
+          aria-label="Vorheriger Zeitraum"
+          className="flex size-6 items-center justify-center rounded-md transition hover:bg-slate-100"
+        >
+          <ChevronLeft className="size-4" />
+        </Link>
+        <span className="min-w-28 px-2 text-center capitalize">
+          {period.label}
+        </span>
+        <Link
+          href={buildShiftedPeriodHref(pathname, searchParams, 1)}
+          aria-label="Naechster Zeitraum"
+          className="flex size-6 items-center justify-center rounded-md transition hover:bg-slate-100"
+        >
+          <ChevronRight className="size-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function PeriodPickerFallback() {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="hidden rounded-lg border border-slate-200 bg-white p-1 text-xs font-semibold shadow-sm sm:flex">
+        <span className="rounded-md bg-emerald-500 px-3 py-1.5 text-white">
+          Monat
+        </span>
+        <span className="px-3 py-1.5 text-slate-500">Quartal</span>
+        <span className="px-3 py-1.5 text-slate-500">Jahr</span>
+      </div>
+      <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold shadow-sm">
+        <ChevronLeft className="size-4" />
+        <span className="min-w-28 px-2 text-center">Mai 2024</span>
+        <ChevronRight className="size-4" />
+      </div>
     </div>
   );
 }
@@ -115,6 +210,147 @@ function isActivePath(pathname: string, href: string) {
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavigationLinks({
+  itemClassName,
+  pathname,
+}: {
+  itemClassName: (active: boolean) => string;
+  pathname: string;
+}) {
+  const searchParams = useSearchParams();
+
+  return (
+    <>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = isActivePath(pathname, item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={buildPeriodHref(item.href, searchParams)}
+            className={itemClassName(active)}
+          >
+            <Icon className="size-5" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+function NavigationLinksFallback({
+  itemClassName,
+  pathname,
+}: {
+  itemClassName: (active: boolean) => string;
+  pathname: string;
+}) {
+  return (
+    <>
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = isActivePath(pathname, item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={itemClassName(active)}
+          >
+            <Icon className="size-5" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+// Kept as a client hook boundary for future mobile nav refinements.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function MobileBottomNavigation({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+
+  return (
+    <>
+      {mobileNavItems.map((item) => {
+        if (!item) {
+          return (
+            <label
+              key="quick-action"
+              htmlFor="quick-action-menu"
+              aria-label="Schnellauswahl öffnen"
+              className="flex cursor-pointer flex-col items-center gap-1"
+            >
+              <span className="mb-1 flex size-14 -translate-y-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition peer-checked/action:rotate-45">
+                <Plus className="size-7" />
+              </span>
+            </label>
+          );
+        }
+
+        const Icon = item.icon;
+        const active = isActivePath(pathname, item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={buildPeriodHref(item.href, searchParams)}
+            className={`flex flex-col items-center gap-1 ${
+              active ? "text-emerald-700" : ""
+            }`}
+          >
+            <Icon className="size-5" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function MobileBottomNavigationFallback({ pathname }: { pathname: string }) {
+  return (
+    <>
+      {mobileNavItems.map((item) => {
+        if (!item) {
+          return (
+            <label
+              key="quick-action"
+              htmlFor="quick-action-menu"
+              aria-label="Schnellauswahl öffnen"
+              className="flex cursor-pointer flex-col items-center gap-1"
+            >
+              <span className="mb-1 flex size-14 -translate-y-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition peer-checked/action:rotate-45">
+                <Plus className="size-7" />
+              </span>
+            </label>
+          );
+        }
+
+        const Icon = item.icon;
+        const active = isActivePath(pathname, item.href);
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex flex-col items-center gap-1 ${
+              active ? "text-emerald-700" : ""
+            }`}
+          >
+            <Icon className="size-5" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
 }
 
 function useCurrentPage() {
@@ -167,25 +403,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="mt-8 flex flex-col gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActivePath(pathname, item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
+            <Suspense
+              fallback={
+                <NavigationLinksFallback
+                  pathname={pathname}
+                  itemClassName={(active) =>
+                    `flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
+                      active
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/20"
+                        : "text-slate-200 hover:bg-white/10"
+                    }`
+                  }
+                />
+              }
+            >
+              <NavigationLinks
+                pathname={pathname}
+                itemClassName={(active) =>
+                  `flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
                     active
                       ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/20"
                       : "text-slate-200 hover:bg-white/10"
-                  }`}
-                >
-                  <Icon className="size-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+                  }`
+                }
+              />
+            </Suspense>
           </nav>
 
           <div className="mt-auto flex items-center gap-3 rounded-lg px-2 py-3">
@@ -210,25 +452,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="mt-10 flex flex-col gap-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActivePath(pathname, item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
+            <Suspense
+              fallback={
+                <NavigationLinksFallback
+                  pathname={pathname}
+                  itemClassName={(active) =>
+                    `flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
+                      active
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/20"
+                        : "text-slate-200 hover:bg-white/10"
+                    }`
+                  }
+                />
+              }
+            >
+              <NavigationLinks
+                pathname={pathname}
+                itemClassName={(active) =>
+                  `flex h-12 items-center gap-3 rounded-lg px-4 text-left text-sm font-medium transition ${
                     active
                       ? "bg-emerald-500 text-white shadow-lg shadow-emerald-950/20"
                       : "text-slate-200 hover:bg-white/10"
-                  }`}
-                >
-                  <Icon className="size-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+                  }`
+                }
+              />
+            </Suspense>
           </nav>
 
           <div className="mt-auto flex items-center gap-3 rounded-lg px-2 py-3">
@@ -254,7 +502,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-5">
-              <MonthPicker />
+              <Suspense fallback={<PeriodPickerFallback />}>
+                <PeriodPicker />
+              </Suspense>
               <Bell className="size-5" />
               <Users className="size-5" />
             </div>
@@ -274,11 +524,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex-1 px-4 pb-28 lg:px-8 lg:pb-8 lg:pt-6">
             <div className="mx-auto flex max-w-7xl items-center justify-center pb-4 lg:hidden">
-              <div className="flex items-center gap-8 text-sm font-semibold">
-                <ChevronLeft className="size-4" />
-                Mai 2024
-                <ChevronRight className="size-4" />
-              </div>
+              <Suspense fallback={<PeriodPickerFallback />}>
+                <PeriodPicker />
+              </Suspense>
             </div>
 
             {children}
@@ -346,7 +594,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={buildPeriodHref(
+                  item.href,
+                  new URLSearchParams(
+                    typeof window === "undefined" ? "" : window.location.search,
+                  ),
+                )}
                 className={`flex flex-col items-center gap-1 ${
                   active ? "text-emerald-700" : ""
                 }`}
